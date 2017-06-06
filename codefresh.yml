@@ -1,0 +1,38 @@
+version: "1.0"
+
+steps:
+  Build:
+    title: Docker Image Build
+    type: build
+    image_name: hope/docker-gen
+    working_directory: ./
+    dockerfile: Dockerfile
+
+  Test:
+    title: Running Tests
+    image: "${{Build}}"
+    working_directory: IMAGE_WORK_DIR
+    commands:
+      - "echo -n Docker Gen version: "
+      - "docker-gen -version"
+    on_success:
+      metadata:
+        set:
+          - "${{Build.imageId}}":
+              - CF_QUALITY: true
+    on_fail:
+      metadata:
+        set:
+          - "${{Build.imageId}}":
+              - CF_QUALITY: false
+
+  PushLatest:
+    title: Pushing latest to Docker Hub
+    type: push
+    candidate: "${{Build}}"
+    tag: latest
+    registry: dockerhub
+    when:
+      branch:
+        only:
+          - "master"
